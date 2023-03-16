@@ -10,11 +10,11 @@ namespace API.Data.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropPrimaryKey(
-                name: "PK_MyProperty",
-                table: "MyProperty");
+                name: "PK_Users",
+                table: "Users");
 
             migrationBuilder.RenameTable(
-                name: "MyProperty",
+                name: "Users",
                 newName: "Users");
 
             migrationBuilder.AddColumn<byte[]>(
@@ -53,11 +53,11 @@ namespace API.Data.Migrations
 
             migrationBuilder.RenameTable(
                 name: "Users",
-                newName: "MyProperty");
+                newName: "Users");
 
             migrationBuilder.AddPrimaryKey(
-                name: "PK_MyProperty",
-                table: "MyProperty",
+                name: "PK_Users",
+                table: "Users",
                 column: "Id");
         }
     }
