@@ -18,7 +18,8 @@ namespace API.Data.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Users", x => x.Id);
+                    table.PrimaryKey("Id", x => x.Id);
+                    //table.PrimaryKey("PK_Users", x => x.Id);
                 });
         }
 

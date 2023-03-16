@@ -4,43 +4,67 @@ using API.Entities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Cryptography;
+using System.Text;
+using System.Xml.Linq;
 
-namespace API.Controllers;
-
-  // [ApiController]
-  // [Route("api/[controller]")]
-  //[Route("[controllers]")]
-public class AccountController:BaseApiController
+namespace API.Controllers
 {
-    private readonly DataContext _context;
 
-    public AccountController(DataContext context)
+    // [ApiController]
+    // [Route("api/[controller]")]
+    //[Route("[controllers]")]
+    public class AccountController : BaseApiController
     {
-        _context = context;            
-    }
+        private readonly DataContext _context;
 
-    [HttpPost("register")]
-    public async Task<ActionResult<AppUser>> Register(RegisterDTO registerDto){
-        if (await UserExists(registerDto.Username))
+        public AccountController(DataContext context)
         {
-            return BadRequest("User already exists");
+            _context = context;
         }
 
-        using var hmac= new HMACSHA512();
-        var user= new AppUser{
-            UserName = registerDto.Username,
-            PasswordHash = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(registerDto.Password)),
-            PasswordSalt = hmac.Key
-        };
-        _context.Users.Add(user);
-        await _context.SaveChangesAsync();
-        return user;
-    }
+        [HttpPost("register")]
+        public async Task<ActionResult<AppUser>> Register([FromBody] RegisterDTO registerDto)
+        {           
+            
+            if (UserExists(registerDto.Username))
+            {
+                return BadRequest("User already exists");
+            }
+            
+            using var hmac = new HMACSHA512();
+            var user = new AppUser
+            {
+                UserName = registerDto.Username.ToLower(),
+                PasswordHash = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(registerDto.Password)),
+                PasswordSalt = hmac.Key
+            };
+            _context.Users.Add(user);
+            await _context.SaveChangesAsync();
+            return user;
+            
+        }
 
-    private async Task<bool> UserExists(string username)
-    {
-        return await _context.Users.AnyAsync(x => x.UserName == username.ToLower());
-    }
+        private bool UserExists(string username) {
+            return _context.Users.Any(x=>x.UserName.ToLower() == (username.ToLower()));
+            
+        }
 
+        [HttpPost("login")]
+        public async Task<ActionResult<AppUser>> Login(LoginDTO loginDto)
+        {
+            var user = await _context.Users.SingleOrDefaultAsync(x=>x.UserName == loginDto.Username);
+            if (user == null)
+                return Unauthorized("invalid username");
+
+            using var hmac = new HMACSHA512(user.PasswordSalt);
+            var computedHash = hmac.ComputeHash(Encoding.UTF8.GetBytes(loginDto.Password));
+            for (int i = 0; i < computedHash.Length; i++)
+            {
+                if (computedHash[i] != user.PasswordHash[i]) return Unauthorized("invalid password");
+            }
+            return user;
+        }
+
+    }
 }
 
