@@ -1,6 +1,7 @@
 using API.Data;
 using API.DTOs;
 using API.Entities;
+using API.Interface;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Cryptography;
@@ -16,14 +17,16 @@ namespace API.Controllers
     public class AccountController : BaseApiController
     {
         private readonly DataContext _context;
+        private readonly ITokenService _tokenService;
 
-        public AccountController(DataContext context)
+        public AccountController(DataContext context,ITokenService tokenService)
         {
             _context = context;
+            _tokenService = tokenService;
         }
 
         [HttpPost("register")]
-        public async Task<ActionResult<AppUser>> Register([FromBody] RegisterDTO registerDto)
+        public async Task<ActionResult<UserDTO>> Register([FromBody] RegisterDTO registerDto)
         {           
             
             if (UserExists(registerDto.Username))
@@ -39,8 +42,8 @@ namespace API.Controllers
                 PasswordSalt = hmac.Key
             };
             _context.Users.Add(user);
-            await _context.SaveChangesAsync();
-            return user;
+            await _context.SaveChangesAsync(); 
+            return new UserDTO { Username=user.UserName, Token = _tokenService.CreateToken(user) };
             
         }
 
@@ -50,7 +53,7 @@ namespace API.Controllers
         }
 
         [HttpPost("login")]
-        public async Task<ActionResult<AppUser>> Login(LoginDTO loginDto)
+        public async Task<ActionResult<UserDTO>> Login(LoginDTO loginDto)
         {
             var user = await _context.Users.SingleOrDefaultAsync(x=>x.UserName == loginDto.Username);
             if (user == null)
@@ -62,7 +65,8 @@ namespace API.Controllers
             {
                 if (computedHash[i] != user.PasswordHash[i]) return Unauthorized("invalid password");
             }
-            return user;
+            return new UserDTO { Username = user.UserName, Token = _tokenService.CreateToken(user) };
+
         }
 
     }
